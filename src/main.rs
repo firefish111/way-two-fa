@@ -1,50 +1,49 @@
 use data_encoding::BASE32_NOPAD;
-use std::{time, thread, env, io, io::Write}; 
-use colored::{Colorize, Color};
+use std::{env, io::{self, stdout, Write}}; 
+
+// ratatui
+use ratatui::{
+  backend::CrosstermBackend,
+  crossterm::{
+    event::{self, KeyCode, KeyEventKind},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
+  },
+  Terminal,
+};
 
 mod acc;
 use acc::Account;
 
-fn split_key(ky: u32) -> String {
-  format!("{:0>3} {:0>3}", ky / 1_000, ky % 1000)
-}
+mod ui;
+use ui::App;
+
+pub const INTERVAL: u64 = 30; // 30 seconds
 
 fn main() -> io::Result<()> {
-  const INTERVAL: u64 = 30; // 30 seconds
+  stdout().execute(EnterAlternateScreen)?;
+  enable_raw_mode()?;
+  let mut term = Terminal::new(CrosstermBackend::new(stdout()))?;
+  term.clear()?;
 
-  let code = env::args().skip(1).collect::<Vec<String>>().join("").to_uppercase();
-  let acct = Account {
+  let mut app = App::new();
+  // TODO: csv or secret parsing
+  let code = "2FASTEST"; //env::args().skip(1).collect::<Vec<String>>().join("").to_uppercase();
+  app.accs.push(Account {
     name: String::from("test"),
     acc_id: Some(String::from("personREAL")),
     key: BASE32_NOPAD.decode(&code.to_string().into_bytes()).unwrap(),
-  };
+  });
 
-  let next_exec = time::Duration::from_secs(1); // every 30 secs
+  app.accs.push(Account {
+    name: String::from("test2"),
+    acc_id: Some(String::from("impostorFAKE")),
+    key: BASE32_NOPAD.decode(&"WAAAA234".to_string().into_bytes()).unwrap(),
+  });
 
-  let mut peek = true;
+  let end = app.run(&mut term);
 
-  loop {
-    let time = time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).expect("Before 1970").as_secs();
-    let left = 30 - time % 30;
-    print!("{}{}: {}\t\t{}\t\t{:0>2}\r",
-      acct.name,
-      match acct.acc_id {
-        Some(ref unm) => format!(" <@{}>", unm),
-        None => String::new(),
-      }.bright_blue(),
-      split_key(acct.gen_key(time / INTERVAL)).bold(),
-      if peek { split_key(acct.gen_key(time / INTERVAL + 1)) } else { String::new() }.truecolor(64, 64, 64),
-      left.to_string().color(match left {
-        11..=30 => Color::BrightGreen,
-        6..=10 => Color::Yellow,
-        0..=5 => Color::BrightRed,
-        _ => Color::Magenta, /* in theory unreachable */
-      }),
-    );
-    io::stdout().flush()?;
-
-    thread::sleep(next_exec);
-  };
-
+  stdout().execute(LeaveAlternateScreen)?;
+  disable_raw_mode()?;
   Ok(())
 }
