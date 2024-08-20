@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "way2fa"
+path = "src/main.rs"
 
 [dependencies]
 data-encoding = "2.5.0"
 hmac = "0.12.1"
 sha1 = "0.10.6"
-colored = "2.1.0"
+ratatui = "0.28.0"

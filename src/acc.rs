@@ -7,6 +7,7 @@ pub struct Account {
   pub name: String,
   pub acc_id: Option<String>,
   pub key: Vec<u8>,
+  pub interv: u64,
 }
 
 impl Account {

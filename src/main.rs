@@ -18,8 +18,6 @@ use acc::Account;
 mod ui;
 use ui::App;
 
-pub const INTERVAL: u64 = 30; // 30 seconds
-
 fn main() -> io::Result<()> {
   stdout().execute(EnterAlternateScreen)?;
   enable_raw_mode()?;
@@ -33,12 +31,14 @@ fn main() -> io::Result<()> {
     name: String::from("test"),
     acc_id: Some(String::from("personREAL")),
     key: BASE32_NOPAD.decode(&code.to_string().into_bytes()).unwrap(),
+    interv: 30, // 30 seconds
   });
 
   app.accs.push(Account {
     name: String::from("test2"),
     acc_id: Some(String::from("impostorFAKE")),
     key: BASE32_NOPAD.decode(&"WAAAA234".to_string().into_bytes()).unwrap(),
+    interv: 30, // 30 seconds
   });
 
   let end = app.run(&mut term);
