@@ -1,3 +1,5 @@
+//! TUI creation - uses the Ratatui library to create the interface
+
 use std::{time, io::{self, Stdout}};
 
 use crate::{acc::Account, parse::AccList};
@@ -14,8 +16,14 @@ use ratatui::{
   style::Stylize,
 };
 
+/// typedef the terminal to `Tty` for QoL
 pub type Tty = Terminal<CrosstermBackend<Stdout>>;
 
+/// The current state of the app.
+/// 
+/// - `quitting` - whether the app will exit next frame
+/// - `is_peek` - whether the next tick's codes are displaying
+/// - `accs` - list of accounts to display 2FA codes for
 pub struct App {
   quitting: bool, 
   is_peek: bool,
@@ -23,6 +31,7 @@ pub struct App {
 }
 
 impl App {
+  /// Creates new app, takes an account fetcher as an argument to fetch accounts
   pub fn new(inp: &impl AccList) -> Self {
     Self {
       quitting: false,
@@ -31,11 +40,13 @@ impl App {
     }
   }
 
-  // abstracted into a method to placate borrow checker
+  /// Renders frame of UI.
+  /// It's abstracted into a method to placate borrow checker
   fn render_frame(&self, frame: &mut Frame) {
     frame.render_widget(self, frame.area());
   }
 
+  /// Where the app runs - each frame is drawn in this loop.
   pub fn run(&mut self, term: &mut Tty) -> io::Result<()> {
     while !self.quitting {
       term.draw(|frame| self.render_frame(frame))?;
@@ -44,6 +55,8 @@ impl App {
     Ok(())
   }
 
+  /// Handle keyboard events.
+  /// Keyreleases are basically impossible as most ttys hide them, so only keypresses are detected
   pub fn handle_events(&mut self) -> io::Result<()> {
     // check if it has been 25ms, to make it non blocking
     if event::poll(std::time::Duration::from_millis(25))? /* 25ms = 40/s */ {
@@ -64,13 +77,19 @@ impl App {
   }
 }
 
+/// Width of the border of the main box
 const BORDER_WIDTH: u16 = 2_u16;
+
+/// Width of a single code
 const CODE_WIDTH: u16 = 9_u16;
+
+/// Minimum padding either side of the progress bar
 const PADDING: (u16, u16) = (4_u16, 1_u16); // padding
 
-// widgets are just lots of components, therefore the whole application is just a big widget
-// also has to be implemented for reference to it to once again placate borrow checker
+/// widgets are just lots of components, therefore the whole application is just a big widget
+/// also has to be implemented for `&App` to once again placate borrow checker
 impl Widget for &App {
+  /// Meat of the app - render one frame
   fn render(self, area: Rect, buf: &mut Buffer) {
     // current time
     let time = time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).expect("Before 1970").as_secs();

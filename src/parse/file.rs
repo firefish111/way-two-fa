@@ -1,9 +1,12 @@
+//! CSV parser
+
 use crate::acc::Account;
 use super::AccList;
 
 use csv::Reader;
 use std::error::Error;
 
+/// Reads 2FA keys from a CSV file
 pub struct CsvParser {
   pub filename: String,
 }
@@ -17,5 +20,9 @@ impl AccList for CsvParser {
 
     // errors need to be in box, so we just cast the error, and rewrap in ok
     Ok(ret?)
+  }
+
+  fn write_accs(&self, to_write: Vec<Account>) {
+    todo!();
   }
 }

@@ -1,3 +1,5 @@
+//! way2fa - A basic TUI 2FA applet
+
 use std::io::{self, stdout}; 
 
 // ratatui
