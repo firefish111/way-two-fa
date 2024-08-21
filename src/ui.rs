@@ -1,12 +1,11 @@
 use std::{time, io::{self, Stdout}};
 
-use crate::acc::Account;
+use crate::{acc::Account, parse::AccList};
 
 use ratatui::{
   backend::CrosstermBackend,
   crossterm::{
-    execute,
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    event::{self, Event, KeyCode, KeyEventKind},
   },
   Terminal,
   prelude::*,
@@ -24,11 +23,11 @@ pub struct App {
 }
 
 impl App {
-  pub fn new() -> Self {
+  pub fn new(inp: &impl AccList) -> Self {
     Self {
       quitting: false,
       is_peek: false,
-      accs: Vec::new(),
+      accs: inp.get_accs().unwrap(),
     }
   }
 
@@ -39,7 +38,7 @@ impl App {
 
   pub fn run(&mut self, term: &mut Tty) -> io::Result<()> {
     while !self.quitting {
-      term.draw(|frame| self.render_frame(frame));
+      term.draw(|frame| self.render_frame(frame))?;
       self.handle_events()?;
     }
     Ok(())

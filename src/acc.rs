@@ -1,11 +1,16 @@
 use sha1::Sha1;
 use hmac::{Hmac, Mac};
 
+use serde::Deserialize;
+use crate::parse::base32_plugin;
+
 type Hasher = Hmac<Sha1>;
 
+#[derive(Debug, Deserialize)]
 pub struct Account {
   pub name: String,
   pub acc_id: Option<String>,
+  #[serde(deserialize_with = "base32_plugin")]
   pub key: Vec<u8>,
   pub interv: u64,
 }
