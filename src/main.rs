@@ -13,10 +13,11 @@ use ratatui::{
 };
 
 mod acc;
-use acc::Account;
-
 mod ui;
+mod parse;
+use acc::Account;
 use ui::App;
+
 
 fn main() -> io::Result<()> {
   stdout().execute(EnterAlternateScreen)?;
