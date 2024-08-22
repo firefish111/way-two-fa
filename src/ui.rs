@@ -27,17 +27,19 @@ pub type Tty = Terminal<CrosstermBackend<Stdout>>;
 pub struct App {
   quitting: bool, 
   is_peek: bool,
+  is_new: bool,
   pub accs: Vec<Account>,
 }
 
 impl App {
   /// Creates new app, takes an account fetcher as an argument to fetch accounts
-  pub fn new(inp: &impl AccList) -> Self {
-    Self {
+  pub fn new(inp: &impl AccList) -> Result<Self, Box<dyn std::error::Error>> {
+    Ok(Self {
       quitting: false,
       is_peek: false,
-      accs: inp.get_accs().unwrap(),
-    }
+      is_new: false,
+      accs: inp.get_accs()?,
+    })
   }
 
   /// Renders frame of UI.
@@ -66,6 +68,7 @@ impl App {
           match kev.code {
             KeyCode::Char('q') => self.quitting = true,
             KeyCode::Char('p') => self.is_peek = !self.is_peek,
+            KeyCode::Char('n') => self.is_new = !self.is_new,
             _ => {}
           }
         },
@@ -97,7 +100,7 @@ impl Widget for &App {
     let titl = Title::from(Line::from(vec![
         " ".into(),
         " way2fa ".light_yellow().on_red().bold(),
-        " - My Codes".dark_gray(),
+        " - My OTPs".dark_gray(),
         " ".into(),
       ]))
       .alignment(Alignment::Left);
@@ -113,9 +116,9 @@ impl Widget for &App {
         "P".light_yellow().bold().underlined().bg(if self.is_peek { Color::Cyan } else { Color::Blue }),
         "eek ".light_red().bold().bg(if self.is_peek { Color::Cyan } else { Color::Blue }),
         " | ".into(),
-        " ".on_blue(),
-        "N".light_yellow().on_blue().bold().underlined(),
-        "ew ".light_red().on_blue().bold(),
+        " ".bg(if self.is_new { Color::Cyan } else { Color::Blue }),
+        "N".light_yellow().bold().underlined().bg(if self.is_new { Color::Cyan } else { Color::Blue }),
+        "ew ".light_red().bold().bg(if self.is_new { Color::Cyan } else { Color::Blue }),
         " ".into(),
       ]))
       .position(Position::Bottom)
@@ -140,9 +143,10 @@ impl Widget for &App {
     let mut progs = Vec::new();
 
     for ac in &self.accs {
-      let secs = time % ac.interv;
+      let interv = ac.interv.unwrap_or(30); // default is 30secs
+      let secs = time % interv;
       // actual key
-      let ky = ac.gen_key(time / ac.interv);
+      let ky = ac.gen_key(time / interv);
 
       let topush = vec![
         ac.name.clone().light_cyan().bold(),
@@ -156,7 +160,7 @@ impl Widget for &App {
 
       // ONPEEK
       if self.is_peek {
-        let peeky = ac.gen_key((time / ac.interv) + 1);
+        let peeky = ac.gen_key((time / interv) + 1);
         let peek_where = Rect {
           x: area.width - CODE_WIDTH - PADDING.1 - BORDER_WIDTH, // +1 for padding
           y: (para.len() + 1) as u16 + area.y,
@@ -169,18 +173,17 @@ impl Widget for &App {
       
 
       let prog = LineGauge::default()
-        .filled_style(Style::default().fg(match secs {
-            25..=30 => Color::LightRed,
+        .filled_style(Style::default().fg(match interv - secs {
+            0..=5 => Color::LightRed,
             _ => Color::LightMagenta
           }))
         .unfilled_style(Style::default().fg(Color::Magenta))
-        .label(format!("{:0>2}s", (ac.interv - secs)).fg(match secs {
-            25..=30 => Color::LightRed,
-            20..=24 => Color::Yellow,
-            0..=19 => Color::LightGreen,
-            _ => Color::Cyan,
+        .label(format!("{:0>2}s", (interv - secs)).fg(match interv - secs {
+            11.. => Color::LightGreen,
+            5..=10 => Color::Yellow,
+            0..5 => Color::LightRed,
           }).bold())
-        .ratio((secs as f64) / (ac.interv as f64))
+        .ratio((secs as f64) / (interv as f64))
         .line_set(symbols::line::DOUBLE);
       
       progs.push(prog);
@@ -194,7 +197,7 @@ impl Widget for &App {
       let progbar_where = Rect {
         x: text_len + area.x + PADDING.0 + BORDER_WIDTH, // +1 for padding
         y: (rn + 1) as u16 + area.y,
-        width: area.width - text_len - PADDING.0 - PADDING.1 - 2*BORDER_WIDTH - if self.is_peek { CODE_WIDTH + 2 } else { 0 },
+        width: area.width.saturating_sub(text_len + PADDING.0 + PADDING.1 + 2*BORDER_WIDTH + if self.is_peek { CODE_WIDTH + 2 } else { 0 }),
         height: 1,
       };
       gbar.render(progbar_where, buf);

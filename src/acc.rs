@@ -16,7 +16,7 @@ pub struct Account {
 
   #[serde(deserialize_with = "base32_plugin")]
   pub key: Vec<u8>,
-  pub interv: u64, // most often is 30
+  pub interv: Option<u64>, // most often is 30
 }
 
 impl Account {

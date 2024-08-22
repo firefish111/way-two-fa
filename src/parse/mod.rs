@@ -12,7 +12,8 @@ pub fn base32_plugin<'de, D>(deser: D) -> Result<Vec<u8>, D::Error>
   
   // adding a serde plugin
   String::deserialize(deser)
-    .and_then(|code| BASE32_NOPAD.decode(&code.into_bytes()).map_err(|err| serde::de::Error::custom(err.to_string())))
+    .and_then(|code| BASE32_NOPAD.decode(&code.into_bytes())
+    .map_err(|err| serde::de::Error::custom(err.to_string())))
 }
 
 /// Trait for all possible backends that can obtain an Account list
