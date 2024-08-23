@@ -2,7 +2,7 @@
 
 use std::{time, io::{self, Stdout}};
 
-use crate::{acc::Account, parse::AccList};
+use crate::{acc::Account, parse::AccList, GenericResult};
 
 use ratatui::{
   backend::CrosstermBackend,
@@ -33,7 +33,7 @@ pub struct App {
 
 impl App {
   /// Creates new app, takes an account fetcher as an argument to fetch accounts
-  pub fn new(inp: &impl AccList) -> Result<Self, Box<dyn std::error::Error>> {
+  pub fn new(inp: &impl AccList) -> GenericResult<Self> {
     Ok(Self {
       quitting: false,
       is_peek: false,

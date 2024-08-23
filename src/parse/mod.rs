@@ -2,7 +2,7 @@
 
 pub mod file;
 
-use crate::acc::Account;
+use crate::{acc::Account, GenericResult};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use data_encoding::BASE32_NOPAD;
 
@@ -19,7 +19,7 @@ pub fn base32_plugin<'de, D>(deser: D) -> Result<Vec<u8>, D::Error>
 /// Trait for all possible backends that can obtain an Account list
 pub trait AccList {
   /// Retrieve accounts from storage
-  fn get_accs(&self) -> Result<Vec<Account>, Box<dyn std::error::Error>>;
+  fn get_accs(&self) -> GenericResult<Vec<Account>>;
 
   /// Write accounts to storage
   fn write_accs(&self, to_write: Vec<Account>);
