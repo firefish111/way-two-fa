@@ -53,10 +53,7 @@ fn main() -> GenericResult<()> {
   let mut confpath = match config_dir() { 
     Some(pth) => pth,
     None if argv.is_empty() => panic!("No config directory, and no other file given."),
-    _ => {
-      panic!("WARNING: No config directory");
-      PathBuf::new()
-    },
+    _ => panic!("WARNING: No config directory"),
   };
   confpath.push(DIR_NAME);
   confpath.push(DEFAULT_FILENAME);

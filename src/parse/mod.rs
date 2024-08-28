@@ -21,6 +21,9 @@ pub trait AccList {
   /// Retrieve accounts from storage
   fn get_accs(&self) -> GenericResult<Vec<Account>>;
 
+  /// Returns a string detailing the source of the data (to go on the titlebar)
+  fn get_src(&self) -> GenericResult<String>;
+
   /// Write accounts to storage
   fn write_accs(&self, to_write: Vec<Account>);
 }

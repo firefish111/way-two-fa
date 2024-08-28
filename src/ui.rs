@@ -23,11 +23,14 @@ pub type Tty = Terminal<CrosstermBackend<Stdout>>;
 /// 
 /// - `quitting` - whether the app will exit next frame
 /// - `is_peek` - whether the next tick's codes are displaying
+/// - `is_new` - whether the new code window is displaying
+/// - `acc_src` - the source file of the accounts
 /// - `accs` - list of accounts to display 2FA codes for
 pub struct App {
   quitting: bool, 
   is_peek: bool,
   is_new: bool,
+  acc_src: String,
   pub accs: Vec<Account>,
 }
 
@@ -38,13 +41,14 @@ impl App {
       quitting: false,
       is_peek: false,
       is_new: false,
+      acc_src: inp.get_src()?,
       accs: inp.get_accs()?,
     })
   }
 
   /// Renders frame of UI.
   /// It's abstracted into a method to placate borrow checker
-  fn render_frame(&self, frame: &mut Frame) {
+  fn render_frame(&mut self, frame: &mut Frame) {
     frame.render_widget(self, frame.area());
   }
 
@@ -65,11 +69,18 @@ impl App {
       match event::read()? {
         Event::Key(kev) if kev.kind == KeyEventKind::Press => {
           // manage keydown
-          match kev.code {
-            KeyCode::Char('q') => self.quitting = true,
-            KeyCode::Char('p') => self.is_peek = !self.is_peek,
-            KeyCode::Char('n') => self.is_new = !self.is_new,
-            _ => {}
+          if self.is_new {
+            match kev.code {
+              KeyCode::Esc => self.is_new = false,
+              _ => {}
+            }
+          } else {
+            match kev.code {
+              KeyCode::Char('q') => self.quitting = true,
+              KeyCode::Char('p') => self.is_peek = !self.is_peek,
+              KeyCode::Char('n') => self.is_new = true,
+              _ => {}
+            }
           }
         },
         _ => {}
@@ -91,9 +102,18 @@ const PADDING: (u16, u16) = (4_u16, 1_u16); // padding
 
 /// widgets are just lots of components, therefore the whole application is just a big widget
 /// also has to be implemented for `&App` to once again placate borrow checker
-impl Widget for &App {
+impl Widget for &mut App {
   /// Meat of the app - render one frame
-  fn render(self, area: Rect, buf: &mut Buffer) {
+  fn render(mut self, area: Rect, buf: &mut Buffer) {
+    // first thing, layouts
+    let layts = Layout::default()
+      .direction(Direction::Vertical)
+      .constraints(vec![
+          Constraint::Min(self.accs.len() as u16 + 2), // 2 for borders
+          Constraint::Length(if self.is_new { 10 } else { 0 }),
+      ])
+      .split(area);
+
     // current time
     let time = time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).expect("Before 1970").as_secs();
 
@@ -104,6 +124,13 @@ impl Widget for &App {
         " ".into(),
       ]))
       .alignment(Alignment::Left);
+
+    let loc_titl = Title::from(Line::from(vec![
+        " ".into(),
+        format!(" {} ", self.acc_src).light_cyan().on_yellow().bold(),
+        " ".into(),
+      ]))
+      .alignment(Alignment::Center);
 
     // a bit lengthy
     let instrs = Title::from(Line::from(vec![
@@ -126,6 +153,7 @@ impl Widget for &App {
 
     let mut blk = Block::bordered()
       .title(titl)
+      .title(loc_titl)
       .title(instrs)
       .padding(Padding::horizontal(1))
       .border_set(border::DOUBLE);
@@ -134,7 +162,7 @@ impl Widget for &App {
     if self.is_peek {
       blk = blk.title(Title::from(Line::from(vec![
         " ".into(),
-        " Next Code ".light_cyan().on_yellow().bold(),
+        " Next Code ".light_green().on_blue().bold(),
         " ".into(),
       ])).alignment(Alignment::Right));
     }
@@ -197,7 +225,9 @@ impl Widget for &App {
       let progbar_where = Rect {
         x: text_len + area.x + PADDING.0 + BORDER_WIDTH, // +1 for padding
         y: (rn + 1) as u16 + area.y,
-        width: area.width.saturating_sub(text_len + PADDING.0 + PADDING.1 + 2*BORDER_WIDTH + if self.is_peek { CODE_WIDTH + 2 } else { 0 }),
+        width: area.width.saturating_sub(
+          text_len + PADDING.0 + PADDING.1 + 2*BORDER_WIDTH + if self.is_peek { CODE_WIDTH + 2 } else { 0 }
+        ),
         height: 1,
       };
       gbar.render(progbar_where, buf);
@@ -205,6 +235,6 @@ impl Widget for &App {
 
     Paragraph::new(Text::from(para))
       .block(blk)
-      .render(area, buf);
+      .render(layts[0], buf);
   }
 }

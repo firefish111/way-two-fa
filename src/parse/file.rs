@@ -8,7 +8,7 @@ use std::{error::Error, path::PathBuf};
 
 /// Reads 2FA keys from a CSV file
 pub struct CsvParser {
-  pub filename: PathBuf,
+  filename: PathBuf,
 }
 
 impl AccList for CsvParser {
@@ -19,8 +19,14 @@ impl AccList for CsvParser {
     // converting Iterator<Result> to Result<Vec>
     let ret: Result<Vec<Account>, csv::Error> = dat.deserialize().collect();
 
-    // errors need to be in box, so we just cast the error, and rewrap in ok
+    // errors need to be boxed, so we just cast the error, and rewrap in ok
     Ok(ret?)
+  }
+
+  fn get_src(&self) -> GenericResult<String> {
+    self.filename.file_name().map(
+      |s| s.to_os_string().into_string().unwrap()
+    ).ok_or("<no source available>".into())
   }
 
   fn write_accs(&self, to_write: Vec<Account>) {
