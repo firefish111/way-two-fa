@@ -2,7 +2,7 @@
 
 use std::{time, io::{self, Stdout}};
 
-use crate::{acc::Account, parse::AccList, GenericResult};
+use crate::{acc::Account, parse::{AccList, DataSrc}};
 
 use ratatui::{
   backend::CrosstermBackend,
@@ -30,19 +30,21 @@ pub struct App {
   quitting: bool, 
   is_peek: bool,
   is_new: bool,
-  acc_src: String,
+  acc_src: DataSrc<String>,
   pub accs: Vec<Account>,
 }
 
+use anyhow::{Context, Result};
+
 impl App {
   /// Creates new app, takes an account fetcher as an argument to fetch accounts
-  pub fn new(inp: &impl AccList) -> GenericResult<Self> {
+  pub fn new(inp: &impl AccList) -> Result<Self> {
     Ok(Self {
       quitting: false,
       is_peek: false,
       is_new: false,
-      acc_src: inp.get_src()?,
-      accs: inp.get_accs()?,
+      acc_src: inp.get_src(),
+      accs: inp.get_accs().context("Failed to get account list")?,
     })
   }
 
@@ -53,7 +55,7 @@ impl App {
   }
 
   /// Where the app runs - each frame is drawn in this loop.
-  pub fn run(&mut self, term: &mut Tty) -> io::Result<()> {
+  pub fn run(&mut self, term: &mut Tty) -> Result<()> {
     while !self.quitting {
       term.draw(|frame| self.render_frame(frame))?;
       self.handle_events()?;
@@ -63,7 +65,7 @@ impl App {
 
   /// Handle keyboard events.
   /// Keyreleases are basically impossible as most ttys hide them, so only keypresses are detected
-  pub fn handle_events(&mut self) -> io::Result<()> {
+  pub fn handle_events(&mut self) -> Result<()> {
     // check if it has been 25ms, to make it non blocking
     if event::poll(std::time::Duration::from_millis(25))? /* 25ms = 40/s */ {
       match event::read()? {
@@ -127,7 +129,7 @@ impl Widget for &mut App {
 
     let loc_titl = Title::from(Line::from(vec![
         " ".into(),
-        format!(" {} ", self.acc_src).light_cyan().on_yellow().bold(),
+        format!(" {} ", self.acc_src.unwrap()).light_cyan().bg(if let DataSrc::Msg(_) = self.acc_src { Color::Red } else { Color::Yellow }).bold(),
         " ".into(),
       ]))
       .alignment(Alignment::Center);

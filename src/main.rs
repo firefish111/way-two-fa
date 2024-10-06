@@ -22,15 +22,15 @@ mod parse;
 use ui::App;
 use parse::{file::CsvParser, AccList};
 
-/// Any result can be cast to this using `?`. Typedef'd as a quick shorthand
-type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
+// any result can be cast to this using `?` - used to be a typedef, but there's ofc a crate for that
+use anyhow::Result;
 
 /// Insulation layer - used to stop errors from exiting the program prematurely.
 ///
 /// While inside this function, terminal is in raw mode.
 /// Exiting before the disable_raw_mode call (in `main`) will leave the terminal completely screwed.
 /// We therefore do anything that spits out prompts to the user OUTSIDE here and either BEFORE or AFTER the disable_raw_mode call
-fn insulation(al: &impl AccList) -> GenericResult<()> {
+fn insulation(al: &impl AccList) -> Result<()> {
   /*
     WARNING: TERMINAL BREAKAGE
   */
@@ -47,7 +47,7 @@ fn insulation(al: &impl AccList) -> GenericResult<()> {
 const DIR_NAME: &str = "way2fa";
 const DEFAULT_FILENAME: &str = "keys.csv";
 
-fn main() -> GenericResult<()> {
+fn main() -> Result<()> {
   let argv = env::args().skip(1).collect::<Vec<String>>();
 
   let mut confpath = match config_dir() { 
@@ -67,7 +67,7 @@ fn main() -> GenericResult<()> {
     confpath
   } else {
     PathBuf::from(argv[0].clone()) // i know its technically argv[1], but i trimmed the first away earlier, so deal with it
-  });
+  }, argv.is_empty(), None);
 
   // normal terminal i/o must cease until terminal is out of raw again
 
